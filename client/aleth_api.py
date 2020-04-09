@@ -11,7 +11,7 @@ class aleth_api:
     def __init__(self):
         self.header_get = 'Accept: application/json'
         self.header_post = 'Content-Type: application/json'
-        self.host = 'localhost:9545'
+        self.host = 'localhost:8111'
 
 
     def eth_blockNumber(self):
@@ -30,6 +30,11 @@ class aleth_api:
     def eth_getBalance(self, address, height):
         assert isinstance(address, str)
         assert isinstance(height, int)
+        if not height:
+            ret = self.eth_blockNumber()
+            data = json.loads(ret)
+            height = int(data['result'],16)
+
         method = 'eth_getBalance'
         d = {
                 'method': method,
@@ -45,7 +50,7 @@ class aleth_api:
     def eth_sendTransaction(self, source, target, value, data, filename):
         assert isinstance(source, str)
         assert isinstance(target, str)
-        assert isinstance(value, int)
+        assert isinstance(value, str)
         assert isinstance(data, str)
         data = util.read_file(filename) if filename else data
         assert all(ch in string.hexdigits for ch in data)
@@ -55,7 +60,7 @@ class aleth_api:
                 'params': [{
                     'from': source,
                     'to': target,
-                    'value': hex(value),
+                    'value': value,
                     'gas': '0xfffff',
                     'data': data
                     }],
@@ -91,7 +96,7 @@ def parse_args():
 
     parser.add_argument('--source', type=str, help='transaction address send from')
     parser.add_argument('--target', type=str, help='transaction address send to')
-    parser.add_argument('--value', type=int, help='transaction value')
+    parser.add_argument('--value', type=str, help='transaction value')
     parser.add_argument('--data', type=str, help='transaction payload')
     parser.add_argument('--filename', type=str, help='transaction payload in file')
 
@@ -100,13 +105,26 @@ def parse_args():
     return args
 
 
+def wrapper_eth_sendTransaction(params):
+    api = aleth_api()
+    ret = api.eth_sendTransaction(params.source, params.target, params.value, params.data, params.filename)
+    print(ret)
+    return ret
+
+
+def gen_transactions(params):
+    t = util.repeat_timer(0.5, wrapper_eth_sendTransaction, [params])
+    t.start()
+
+
 def main():
     args = parse_args()
     op_code = {
             'eth_blockNumber': 'aleth_api().eth_blockNumber()',
             'eth_getBalance': 'aleth_api().eth_getBalance(args.address, args.height)',
             'eth_sendTransaction': 'aleth_api().eth_sendTransaction(args.source, args.target, args.value, args.data, args.filename)',
-            'eth_getTransactionByHash': 'aleth_api().eth_getTransactionByHash(args.txhash)'
+            'eth_getTransactionByHash': 'aleth_api().eth_getTransactionByHash(args.txhash)',
+            'gen_transactions': 'gen_transactions(args)'
             }
     ret = eval(op_code[args.method])
     print(ret)

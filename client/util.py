@@ -2,6 +2,14 @@
 import subprocess
 import shlex
 import os
+import threading
+import time
+
+
+class repeat_timer(threading.Timer):
+    def run(self):
+        while not self.finished.wait(self.interval):
+            self.function(*self.args, **self.kwargs)
 
 
 def run_cmd(cmd):
