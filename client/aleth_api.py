@@ -2,6 +2,8 @@
 import argparse
 import json
 import string
+from datetime import datetime
+import time
 
 import util
 
@@ -117,6 +119,22 @@ def gen_transactions(params):
     t.start()
 
 
+def auto_deploy(args):
+    bytecodes = [
+            'auth.bc', 'common_lib.bc', 'version.bc', 'address.bc',
+            'decycle.bc', 'depend.bc', 'memory.bc', 'ar.bc', 'dip.bc'
+            ]
+    api = aleth_api()
+    for bc in bytecodes:
+        filename = args.filename + bc
+        ret = api.eth_sendTransaction(args.source, args.target, args.value, args.data, filename)
+        output = '%s.%s' % (bc[:-3], datetime.now().strftime('%Y%m%d%H%M%S.%f'))
+        util.write_file(output, ret)
+        time.sleep(20)
+    return True
+
+
+
 def main():
     args = parse_args()
     op_code = {
@@ -124,7 +142,8 @@ def main():
             'eth_getBalance': 'aleth_api().eth_getBalance(args.address, args.height)',
             'eth_sendTransaction': 'aleth_api().eth_sendTransaction(args.source, args.target, args.value, args.data, args.filename)',
             'eth_getTransactionByHash': 'aleth_api().eth_getTransactionByHash(args.txhash)',
-            'gen_transactions': 'gen_transactions(args)'
+            'gen_transactions': 'gen_transactions(args)',
+            'auto': 'auto_deploy(args)'
             }
     ret = eval(op_code[args.method])
     print(ret)

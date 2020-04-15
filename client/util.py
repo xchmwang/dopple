@@ -25,3 +25,10 @@ def read_file(filename):
     content = f.read()
     f.close()
     return content
+
+
+def write_file(filename, content):
+    assert isinstance(filename, str)
+    f = open(filename, 'w')
+    f.write(content)
+    f.close()
